@@ -1,4 +1,4 @@
-import { createRef, useCallback, useEffect, useState } from "react";
+import { createRef, useState } from "react";
 import type { NextPage } from "next";
 import Head from "next/head";
 
@@ -8,7 +8,6 @@ import { validateInput } from "~/validations/triangle";
 const Triangle: NextPage = () => {
   const { mutate, data, isLoading } = api.triangle.maxValuePath.useMutation();
   const [triangle, setTriangle] = useState<string>("");
-
   const [numbers, setNumbers] = useState<
     {
       value: string;
@@ -71,27 +70,18 @@ const Triangle: NextPage = () => {
     col: number;
   }) => {
     if (value === "Enter" || value === "Space") {
-      // check inf current cell is empty
-      if (numbers[row]?.[col]?.value === "") {
-        return;
-      }
-      // if the current input is the last input in the row, then move to the first input in the next row
-      if (col === (numbers[row]?.length ?? 0) - 1) {
+      if (numbers[row]?.[col]?.value === "") return;
+
+      if (col === (numbers?.[row]?.length ?? 0) - 1)
         numbers[row + 1]?.[0]?.ref.current?.focus();
-      }
-      // if the current input is not the last input in the row, then move to the next input in the row
-      if (col < (numbers[row]?.length ?? 0) - 1) {
+
+      if (col < (numbers[row]?.length ?? 0) - 1)
         numbers[row]?.[col + 1]?.ref.current?.focus();
-      }
-      return;
     }
   };
 
   const onFocus = (row: number, col: number) => {
-    // if the user presses enter, tab or space, then move to the next input
-    // check if the current input is the second to last input in the row and it is the last row
     if (col === (numbers[row]?.length ?? 0) - 1 && row === numbers.length - 1) {
-      // if the current input is the second to last input in the row, then add a new row with the same amount of inputs as the row number
       setNumbers((prev) => {
         const newNumbers = [...prev];
         newNumbers.push(
@@ -124,9 +114,8 @@ const Triangle: NextPage = () => {
               Enter the triangle
             </h2>
 
-            {/* create a input box for the ammount of inputs variable */}
             <div className="flex flex-col items-center gap-4">
-              {...numbers.map((row, i) => (
+              {numbers.map((row, i) => (
                 <div key={i} className="flex gap-4">
                   {row.map((cell, j) => (
                     <input
@@ -163,7 +152,6 @@ const Triangle: NextPage = () => {
             </div>
           </div>
 
-          {/* button to calculate the max value path */}
           <button
             className="rounded-full bg-white/10 px-10 py-3 font-semibold text-white no-underline transition hover:bg-white/20"
             onClick={() => {
@@ -173,16 +161,13 @@ const Triangle: NextPage = () => {
             Calculate
           </button>
 
-          {/* display the result */}
           <div className="flex flex-col gap-4">
-            {/* max sum path */}
             <h2 className="text-2xl font-bold text-pink-400">Max Sum Path</h2>
             <textarea
               className="w-96 rounded-md bg-white/10 px-5 py-3 font-semibold text-white no-underline transition hover:bg-white/20"
               value={data?.sum}
               readOnly
             />
-            {/* color the numbers used in the path from the input */}
             <h2 className="text-2xl font-bold text-pink-400">
               Numbers used in the path
             </h2>
