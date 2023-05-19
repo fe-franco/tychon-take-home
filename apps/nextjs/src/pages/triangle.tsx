@@ -1,44 +1,29 @@
-import { createRef, useState } from "react";
+import { createRef, useEffect, useMemo, useState } from "react";
 import type { NextPage } from "next";
 import Head from "next/head";
+import { set } from "zod";
 
 import { api } from "~/utils/api";
-import { validateInput } from "~/validations/triangle";
+
+const getNumbers = (triangle: string) => {
+  const rows = triangle.split("\n");
+  return rows.map((row) => {
+    const cells = row.split(" ");
+    return cells.map((cell) => ({
+      value: cell.split("-")[0],
+      used: cell.split("-")[1] === "used",
+      ref: createRef<HTMLInputElement>(),
+    }));
+  });
+};
 
 const Triangle: NextPage = () => {
   const { mutate, data, isLoading } = api.triangle.maxValuePath.useMutation();
   const [triangle, setTriangle] = useState<string>("");
-  const [numbers, setNumbers] = useState<
-    {
-      value: string;
-      used: boolean;
-      ref: React.RefObject<HTMLInputElement>;
-    }[][]
-  >([
-    [
-      {
-        value: "",
-        used: false,
-        ref: createRef<HTMLInputElement>(),
-      },
-    ],
-    [
-      {
-        value: "",
-        used: false,
-        ref: createRef<HTMLInputElement>(),
-      },
-      {
-        value: "",
-        used: false,
-        ref: createRef<HTMLInputElement>(),
-      },
-    ],
-  ]);
+  const numbers = useMemo(() => getNumbers(triangle), [triangle]);
 
-  const handleInput = ({
+  const updateValue = ({
     value,
-    used,
     row,
     col,
   }: {
@@ -47,16 +32,21 @@ const Triangle: NextPage = () => {
     row: number;
     col: number;
   }) => {
-    if (!validateInput(value)) return;
+    // update the value
+    setTriangle((prev) => {
+      const newTriangle: string[][] = [
+        ...prev
+          .split("\n")
+          .map((row) =>
+            row.split(" ").map((cell) => `${cell.split("-")[0]}-unused`),
+          ),
+      ];
 
-    setNumbers((prev) => {
-      const newNumbers = [...prev];
-      newNumbers[row]![col] = {
-        value: value.trim(),
-        used,
-        ref: prev[row]?.[col]?.ref ?? createRef<HTMLInputElement>(),
-      };
-      return newNumbers;
+      if (newTriangle[row])
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        newTriangle[row]![col] = `${value.trim().split("-")[0]}-unused`;
+
+      return newTriangle.map((row) => row.join(" ")).join("\n");
     });
   };
 
@@ -72,29 +62,58 @@ const Triangle: NextPage = () => {
     if (value === "Enter" || value === "Space") {
       if (!numbers[row]?.[col]?.value) return;
 
-      if (col === (numbers?.[row]?.length ?? 0) - 1)
-        numbers?.[row + 1]?.[0]?.ref.current?.focus();
+      if (col === (numbers?.[row]?.length ?? 0) - 1) setFocus(row + 1, 0);
 
-      if (col < (numbers[row]?.length ?? 0) - 1)
-        numbers?.[row]?.[col + 1]?.ref.current?.focus();
+      if (col < (numbers[row]?.length ?? 0) - 1) setFocus(row, col + 1);
     }
   };
 
   const onFocus = (row: number, col: number) => {
     if (col === (numbers[row]?.length ?? 0) - 1 && row === numbers.length - 1) {
-      setNumbers((prev) => {
-        const newNumbers = [...prev];
-        newNumbers.push(
-          [...Array(row + 2)].map(() => ({
-            value: "",
-            used: false,
-            ref: createRef<HTMLInputElement>(),
-          })),
-        );
-        return newNumbers;
-      });
+      createNewRow(row + 1);
     }
   };
+
+  const createNewRow = (row: number) => {
+    // create new row with empty value and the number of columns equal to the row number
+    const newRow = Array.from({ length: row + 1 }, () => ({
+      value: "",
+      used: false,
+      ref: createRef<HTMLInputElement>(),
+    }));
+
+    // add new row to the triangle
+    setTriangle((prev) => {
+      const newTriangle: string[][] = [
+        ...prev.split("\n").map((row) => row.split(" ")),
+      ];
+      newTriangle[row] = newRow.map(({ value }) => value);
+      return newTriangle.map((row) => row.join(" ")).join("\n");
+    });
+  };
+
+  const setFocus = (row: number, col: number) => {
+    numbers?.[row]?.[col]?.ref.current?.focus();
+  };
+
+  useEffect(() => {
+    if (data) {
+      setTriangle((prev) => {
+        const newTriangle: string[][] = [
+          ...prev.split("\n").map((row) => row.split(" ")),
+        ];
+        data?.usedCells.forEach(({ row, col }) => {
+          if (newTriangle[row])
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            newTriangle[row]![col] = `${
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              newTriangle[row]![col]?.trim().split("-")[0]
+            }-used`;
+        });
+        return newTriangle.map((row) => row.join(" ")).join("\n");
+      });
+    }
+  }, [data]);
 
   return (
     <>
@@ -120,12 +139,16 @@ const Triangle: NextPage = () => {
               Enter the triangle
             </h2>
 
+            {/* {JSON.stringify(triangle)}
+            {JSON.stringify(data)} */}
+
             <div className={`flex flex-col items-center gap-4`}>
               {numbers.map((row, i) => (
                 <div key={i} className={`flex gap-4`}>
                   {row.map(({ value, used, ref }, j) => (
                     <input
                       contentEditable={true}
+                      type="number"
                       key={j}
                       ref={ref}
                       className={`resize-none overflow-hidden rounded-md ${
@@ -140,7 +163,7 @@ const Triangle: NextPage = () => {
                         });
                       }}
                       onChange={(e) => {
-                        handleInput({
+                        updateValue({
                           value: e.target.value,
                           used,
                           row: i,
@@ -166,34 +189,6 @@ const Triangle: NextPage = () => {
           >
             Calculate
           </button>
-
-          <div className={`flex flex-col gap-4`}>
-            <h2 className={`text-2xl font-bold text-pink-400`}>Max Sum Path</h2>
-            <textarea
-              className={`w-96 rounded-md bg-white/10 px-5 py-3 font-semibold text-white no-underline transition hover:bg-white/20`}
-              value={data?.sum ?? ""}
-              readOnly
-            />
-            <h2 className={`text-2xl font-bold text-pink-400`}>
-              Numbers used in the path
-            </h2>
-            <div className={`flex flex-col items-center gap-4`}>
-              {data?.numbers?.map((row, i) => (
-                <div key={i} className={`flex gap-4`}>
-                  {row.map(({ value, used }, j) => (
-                    <div
-                      key={j}
-                      className={`${
-                        used ? "bg-pink-400" : "bg-white/10"
-                      } flex h-12 w-12 items-center justify-center rounded-md`}
-                    >
-                      {value}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </main>
     </>

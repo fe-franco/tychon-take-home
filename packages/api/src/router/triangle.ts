@@ -2,43 +2,65 @@ import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "../trpc";
 
+type Cell = {
+  value: number;
+  row: number;
+  col: number;
+};
+
+type Path = {
+  sum: number;
+  cells: Cell[];
+};
+
 export const triangleRouter = createTRPCRouter({
   maxValuePath: publicProcedure
     .input(z.string().min(1))
-    .mutation(({ input }) => {
-      const triangle = input
+    .mutation(({ input: triangle }) => {
+      const numbers = triangle
         .split("\n")
-        .map((row) => row.trim().split(" ").map(Number));
+        .map((row, i) =>
+          row
+            .trim()
+            .split(/\s+/)
+            .map((cell, col) => ({
+              value: +cell.replace(/\D/g, ""),
+              row: i,
+              col,
+            })),
+        )
+        .slice(0, -1);
 
-      const numbers = triangle.map((row) =>
-        row.map((value) => ({ value, used: false })),
-      );
+      const findMaxPath = (row: number, col: number): Path => {
+        const cell = numbers[row]?.[col];
+        const nextRow = numbers[row + 1] || [];
 
-      let sum = 0;
-      let col = 0;
-
-      for (let i = 0; i < triangle.length; i++) {
-        const row = triangle[i] ?? [];
-        const left = row[col] ?? 0;
-        const right = row[col + 1] ?? 0;
-
-        if (left > right) {
-          sum += left;
-          const number = numbers[i]?.[col];
-          if (typeof number !== "undefined") {
-            number.used = true;
-          }
-        } else {
-          sum += right;
-          const number = numbers[i]?.[col + 1];
-          if (typeof number !== "undefined") {
-            number.used = true;
-          }
-
-          col++;
+        if (!cell) {
+          return { sum: 0, cells: [] };
         }
-      }
 
-      return { sum, numbers };
+        if (nextRow.length === 0) {
+          return { sum: cell.value, cells: [cell] };
+        }
+
+        const leftPath = findMaxPath(row + 1, col);
+        const rightPath = findMaxPath(row + 1, col + 1);
+
+        if (leftPath.sum > rightPath.sum) {
+          return {
+            sum: cell.value + leftPath.sum,
+            cells: [cell, ...leftPath.cells],
+          };
+        } else {
+          return {
+            sum: cell.value + rightPath.sum,
+            cells: [cell, ...rightPath.cells],
+          };
+        }
+      };
+
+      const maxPath = findMaxPath(0, 0);
+
+      return { sum: maxPath.sum, usedCells: maxPath.cells };
     }),
 });
