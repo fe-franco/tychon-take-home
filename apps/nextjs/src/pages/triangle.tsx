@@ -54,7 +54,7 @@ const Triangle: NextPage = () => {
       newNumbers[row]![col] = {
         value: value.trim(),
         used,
-        ref: prev[row]?.[col]?.ref || createRef<HTMLInputElement>(),
+        ref: prev[row]?.[col]?.ref ?? createRef<HTMLInputElement>(),
       };
       return newNumbers;
     });
@@ -70,13 +70,13 @@ const Triangle: NextPage = () => {
     col: number;
   }) => {
     if (value === "Enter" || value === "Space") {
-      if (numbers[row]?.[col]?.value === "") return;
+      if (!numbers[row]?.[col]?.value) return;
 
       if (col === (numbers?.[row]?.length ?? 0) - 1)
-        numbers[row + 1]?.[0]?.ref.current?.focus();
+        numbers?.[row + 1]?.[0]?.ref.current?.focus();
 
       if (col < (numbers[row]?.length ?? 0) - 1)
-        numbers[row]?.[col + 1]?.ref.current?.focus();
+        numbers?.[row]?.[col + 1]?.ref.current?.focus();
     }
   };
 
@@ -99,33 +99,39 @@ const Triangle: NextPage = () => {
   return (
     <>
       <Head>
-        <title>Tychon Take Home | Triangle</title>
-        <meta name="description" content="Tychon Take Home | Triangle" />
-        <link rel="icon" href="/favicon.ico" />
+        <title>{`Tychon Take Home | Triangle`}</title>
+        <meta name="description" content={`Tychon Take Home | Triangle`} />
+        <link rel="icon" href={`/favicon.ico`} />
       </Head>
-      <main className="flex h-full min-h-screen flex-col items-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-        <div className="container mt-12 flex flex-col items-center justify-center gap-4 px-4 py-8">
-          <h1 className="text-5xl font-extrabold tracking-tight sm:text-[5rem]">
+      <main
+        className={`flex h-full min-h-screen flex-col items-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white`}
+      >
+        <div
+          className={`container mt-12 flex flex-col items-center justify-center gap-4 px-4 py-8`}
+        >
+          <h1
+            className={`text-5xl font-extrabold tracking-tight sm:text-[5rem]`}
+          >
             Triangle Max Value Path Calculation
           </h1>
 
-          <div className="flex flex-col gap-4">
-            <h2 className="text-2xl font-bold text-pink-400">
+          <div className={`flex flex-col gap-4`}>
+            <h2 className={`text-2xl font-bold text-pink-400`}>
               Enter the triangle
             </h2>
 
-            <div className="flex flex-col items-center gap-4">
+            <div className={`flex flex-col items-center gap-4`}>
               {numbers.map((row, i) => (
-                <div key={i} className="flex gap-4">
-                  {row.map((cell, j) => (
+                <div key={i} className={`flex gap-4`}>
+                  {row.map(({ value, used, ref }, j) => (
                     <input
                       contentEditable={true}
                       key={j}
-                      ref={cell.ref}
+                      ref={ref}
                       className={`resize-none overflow-hidden rounded-md ${
-                        cell.used ? "bg-pink-400" : "bg-white/10"
-                      } h-20 w-20 text-center font-semibold text-white no-underline transition hover:bg-white/20`}
-                      value={cell.value}
+                        used ? "bg-pink-400" : "bg-white/10"
+                      } h-12 w-12 text-center font-semibold text-white no-underline transition hover:bg-white/20`}
+                      value={value}
                       onKeyDownCapture={(e) => {
                         keyInput({
                           value: e.key === " " ? "Space" : e.key,
@@ -136,7 +142,7 @@ const Triangle: NextPage = () => {
                       onChange={(e) => {
                         handleInput({
                           value: e.target.value,
-                          used: cell.used,
+                          used,
                           row: i,
                           col: j,
                         });
@@ -153,7 +159,7 @@ const Triangle: NextPage = () => {
           </div>
 
           <button
-            className="rounded-full bg-white/10 px-10 py-3 font-semibold text-white no-underline transition hover:bg-white/20"
+            className={`rounded-full bg-white/10 px-10 py-3 font-semibold text-white no-underline transition hover:bg-white/20`}
             onClick={() => {
               mutate(triangle);
             }}
@@ -161,27 +167,27 @@ const Triangle: NextPage = () => {
             Calculate
           </button>
 
-          <div className="flex flex-col gap-4">
-            <h2 className="text-2xl font-bold text-pink-400">Max Sum Path</h2>
+          <div className={`flex flex-col gap-4`}>
+            <h2 className={`text-2xl font-bold text-pink-400`}>Max Sum Path</h2>
             <textarea
-              className="w-96 rounded-md bg-white/10 px-5 py-3 font-semibold text-white no-underline transition hover:bg-white/20"
-              value={data?.sum}
+              className={`w-96 rounded-md bg-white/10 px-5 py-3 font-semibold text-white no-underline transition hover:bg-white/20`}
+              value={data?.sum ?? ""}
               readOnly
             />
-            <h2 className="text-2xl font-bold text-pink-400">
+            <h2 className={`text-2xl font-bold text-pink-400`}>
               Numbers used in the path
             </h2>
-            <div className="flex flex-col items-center gap-4">
-              {data?.numbers.map((row, i) => (
-                <div key={i} className="flex gap-4">
-                  {row.map((col, j) => (
+            <div className={`flex flex-col items-center gap-4`}>
+              {data?.numbers?.map((row, i) => (
+                <div key={i} className={`flex gap-4`}>
+                  {row.map(({ value, used }, j) => (
                     <div
                       key={j}
                       className={`${
-                        col.used ? "bg-pink-400" : "bg-white/10"
+                        used ? "bg-pink-400" : "bg-white/10"
                       } flex h-12 w-12 items-center justify-center rounded-md`}
                     >
-                      {col.value}
+                      {value}
                     </div>
                   ))}
                 </div>
